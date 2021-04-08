@@ -1,6 +1,7 @@
 {
-    "token":"", 
+    "token":"",
     "prefix" : "#"
 }
-
+//Mettez le token de votre application discord ci-dessus.
+//Puis supprimez ces deux lignes afin que le code marche !!
 
