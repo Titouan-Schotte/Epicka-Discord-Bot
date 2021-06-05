@@ -1,75 +1,73 @@
-// Initialisation du bot (utilisation de discord.js + redirection vers le fichier config qui contient le token + le préfix qui est ici un #)
 
-const Discord = require('discord.js'),
-    client = new Discord.Client({
-        fetchAllMembers: true
-    }),
-    config = require('./config.json'),
-    fs = require('fs')
- 
-client.login(config.token)
-client.commands = new Discord.Collection()
- 
+const Discord = require("discord.js");
+const client = new Discord.Client();
+const config = require("./config.json");
+const fs = require("fs");
+const { exec } = require('child_process');
 
-//Configuration des commandes -> que l'on va ensuite retrouver dans le dossier /commands
-fs.readdir('./commands', (err, files) => {
-    if (err) throw err
-    files.forEach(file => {
-        if (!file.endsWith('.js')) return
-        const command = require(`./commands/${file}`)
-        client.commands.set(command.name, command)
-    })
-})
- 
-client.on('message', message => {
-    if (message.type !== 'DEFAULT' || message.author.bot) return
- 
-    const args = message.content.trim().split(/ +/g)
-    const commandName = args.shift().toLowerCase()
-    if (!commandName.startsWith(config.prefix)) return
-    const command = client.commands.get(commandName.slice(config.prefix.length))
-    if (!command) return
-    command.run(message, args, client)
-})
-
-
-//Statut auto du bot (actualisation toute les 10 secondes)
-client.on('ready', () => {
-    const statuses = [
-        'Dagloth \'s Origins ',
-        '#help'
-    ]
-    let i = 0
-    setInterval(() => {
-        client.user.setActivity(statuses[i], {type: 'PLAYING'})
-        i = ++i % statuses.length
-
-    }, 1e4)
-
-})
-
-
-
-
-//Ping dés qu'un utilisateur rentre dans un channel d'aide
-
-
-client.on('voiceStateUpdate', (oldMember, newMember) => {
-    let newUserChannel = newMember.channelID;
-    let oldUserChannel = oldMember.channelID;
-
-
-    const helpchannel1 = "814954869374451835"
-    const helpchannel2 = "814973286907772999"
-
-    if(newUserChannel === helpchannel1 || newUserChannel === helpchannel2)
-    { 
-        console.log("L'utilisateur vient de rejoindre un vocal d'aide avec cette id : "+newUserChannel);
-        client.channels.cache.get(`789221213993435177`).send(`__**On a besoin de vous**__ <@&${'766963983366094858'}>`)  
+//Execute commands
+function Execute(command){
+  exec(command, (err, stdout, stderr) => {
+    if (err) {
+      // node couldn't execute the command
+      return;
     }
-    else {
-        console.log("Un utilisateur vient de quitter un salon d'aide avec cette id : "+oldUserChannel)
+    // the *entire* stdout and stderr (buffered)
+    console.log(`stdout: ${stdout}`);
+    console.log(`stderr: ${stderr}`);
+  });
+}
+
+
+
+
+//Ready
+client.on("ready", () => {
+  Execute('git init')
+  Execute('git remote add origin https://github.com/Titouan-Schotte/ExtensionChromeBot.git')
+  Execute('git branch -M main')
+  console.log("READY !");
+});
+
+//On player add
+client.on("guildMemberAdd", member => {
+  console.log(`${member.user.tag}`+ " join the server ! ID = " + `${member.id}` + " BOT ? : " + `${member.user.bot}`)
+  var worth = true;
+  try {
+    const data = fs.readFileSync('user.txt', 'UTF-8');
+    const lines = data.split(/\r?\n/);
+    lines.forEach((line) => {
+      if(line == member.id){
+        console.log('Already Exist !')
+        worth = false;
+      }
+    });
+  } catch (err) {
+    console.error(err);
+  }
+  if(worth){
+    console.log('Dont Exist !')
+    var content = '\n'+`${member.id}`
+    if(!member.user.bot){
+      try {
+        fs.appendFile("user.txt",content,function (err) {
+          if (err) throw err;
+          console.log('Saved : ' + `${member.user.tag}`);});
+        //git
+
+        Execute('git add .')
+        Execute('git commit -m "user.txt update"')
+        Execute('git push')
+
+
+
+      }
+      catch (err) {
+        console.error(err);
+      }
     }
+  }
+});
 
- });
-
+//Login
+client.login(config.token);
